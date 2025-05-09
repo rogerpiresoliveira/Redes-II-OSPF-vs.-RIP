@@ -5,7 +5,6 @@ Este projeto tem como objetivo comparar os protocolos de roteamento **OSPF** e *
 ## 📁 Estrutura do Projeto
 
 ```
-Redes_II/
 ├── custom-ubuntu/
 │   └── Dockerfile
 ├── OSPF/
