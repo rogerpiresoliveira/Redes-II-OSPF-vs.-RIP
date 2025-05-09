@@ -1,0 +1,150 @@
+networks:
+  R1_MACHINES:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.1.0/24
+          gateway: 10.10.1.254
+
+  R1_R2:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.2.0/24
+          gateway: 10.10.2.254
+
+  R2_R3:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.3.0/24
+          gateway: 10.10.3.254
+
+  R3_R4:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.4.0/24
+          gateway: 10.10.4.254
+
+  R4_R5:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.5.0/24
+          gateway: 10.10.5.254
+
+  R2_R5:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.6.0/24
+          gateway: 10.10.6.254
+
+  R5_MACHINES:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.7.0/24
+          gateway: 10.10.7.254
+
+services:
+  M1:
+    image: custom-ubuntu
+    container_name: M1
+    networks:
+      R1_MACHINES:
+        ipv4_address: 10.10.1.2
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ../ping-test.sh:/ping-test.sh
+    command: >
+      /bin/bash -c
+      "ip route del default &&
+       ip route add default via 10.10.1.1 &&
+       /bin/bash /ping-test.sh &
+       tail -f /dev/null"
+
+  M2:
+    image: custom-ubuntu
+    container_name: M2
+    networks:
+      R5_MACHINES:
+        ipv4_address: 10.10.7.2
+    cap_add:
+      - NET_ADMIN
+    command: >
+      /bin/bash -c
+      "ip route del default &&
+       ip route add default via 10.10.7.1 &&
+       tail -f /dev/null"
+
+  R1:
+    image: frrouting/frr
+    container_name: R1
+    privileged: true
+    networks:
+      R1_MACHINES:
+        ipv4_address: 10.10.1.1
+      R1_R2:
+        ipv4_address: 10.10.2.1
+    volumes:
+      - ./daemons:/etc/frr/daemons
+      - ./R1/frr1.conf:/etc/frr/frr.conf
+
+  R2:
+    image: frrouting/frr
+    container_name: R2
+    privileged: true
+    networks:
+      R1_R2:
+        ipv4_address: 10.10.2.2
+      R2_R3:
+        ipv4_address: 10.10.3.1
+      R2_R5:
+        ipv4_address: 10.10.6.1
+    volumes:
+      - ./daemons:/etc/frr/daemons
+      - ./R2/frr2.conf:/etc/frr/frr.conf
+
+  R3:
+    image: frrouting/frr
+    container_name: R3
+    privileged: true
+    networks:
+      R2_R3:
+        ipv4_address: 10.10.3.2
+      R3_R4:
+        ipv4_address: 10.10.4.1
+    volumes:
+      - ./daemons:/etc/frr/daemons
+      - ./R3/frr3.conf:/etc/frr/frr.conf
+
+  R4:
+    image: frrouting/frr
+    container_name: R4
+    privileged: true
+    networks:
+      R3_R4:
+        ipv4_address: 10.10.4.2
+      R4_R5:
+        ipv4_address: 10.10.5.2
+    volumes:
+      - ./daemons:/etc/frr/daemons
+      - ./R4/frr4.conf:/etc/frr/frr.conf
+
+  R5:
+    image: frrouting/frr
+    container_name: R5
+    privileged: true
+    networks:
+      R2_R5:
+        ipv4_address: 10.10.6.2
+      R4_R5:
+        ipv4_address: 10.10.5.1
+      R5_MACHINES:
+        ipv4_address: 10.10.7.1
+    volumes:
+      - ./daemons:/etc/frr/daemons
+      - ./R5/frr5.conf:/etc/frr/frr.conf
